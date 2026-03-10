@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="theme-color" content="#05080d"/>
+  <title>MANHUNT</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="apple-touch-icon" href="icon-192.png"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<div id="app">
+
+<!-- ═══════════════════════ AUTH ════════════════════════════════════════ -->
+<div id="screen-auth" class="screen">
+  <div class="spacer"></div>
+  <div style="text-align:center;margin-bottom:32px">
+    <div class="logo-wrap">
+      <div class="logo-ring"></div><div class="logo-ring"></div><div class="logo-ring"></div>
+      <span style="font-size:58px;line-height:1;position:relative">🎯</span>
+    </div>
+    <div class="title-xl" style="margin-top:10px">MAN<br/><span style="color:var(--red)">HUNT</span></div>
+  </div>
+
+  <div id="auth-tabs">
+    <button id="tab-login"  class="auth-tab active" onclick="switchAuthTab('login')">Sign In</button>
+    <button id="tab-signup" class="auth-tab"        onclick="switchAuthTab('signup')">Create Account</button>
+  </div>
+
+  <!-- Login -->
+  <div id="auth-login-form">
+    <div class="card gap">
+      <label class="input-label">Email</label>
+      <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email"/>
+      <label class="input-label">Password</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"/>
+      <div id="login-error" class="err"></div>
+    </div>
+    <button class="btn btn-fill gap-lg" onclick="doLogin()">Sign In →</button>
+  </div>
+
+  <!-- Sign Up -->
+  <div id="auth-signup-form" style="display:none">
+    <div class="card gap">
+      <!-- Avatar upload -->
+      <div class="avatar-upload">
+        <div id="signup-avatar-preview" class="avatar-preview placeholder">👤</div>
+        <button class="btn btn-sm btn-blue" style="width:auto;padding:7px 16px" onclick="document.getElementById('avatar-file-input').click()">Upload Photo</button>
+        <input type="file" id="avatar-file-input" accept="image/*" onchange="onAvatarSelected(this)"/>
+      </div>
+      <label class="input-label">Display Name</label>
+      <input type="text" id="signup-name" placeholder="Your name in game" autocomplete="nickname"/>
+      <label class="input-label">Email</label>
+      <input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email"/>
+      <label class="input-label">Password</label>
+      <input type="password" id="signup-pass" placeholder="6+ characters" autocomplete="new-password"/>
+      <div id="signup-error" class="err"></div>
+    </div>
+    <button class="btn btn-fill gap-lg" onclick="doSignup()">Create Account →</button>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- ═══════════════════════ HOME ════════════════════════════════════════ -->
+<div id="screen-home" class="screen">
+  <div class="row" style="justify-content:space-between;margin-bottom:6px">
+    <div class="row" style="gap:10px">
+      <img id="home-avatar" class="profile-avatar small" src="" alt="" style="display:none"/>
+      <span id="home-avatar-emoji" style="font-size:28px;display:none">👤</span>
+      <div class="mono muted" style="font-size:11px">
+        <span id="home-name" style="color:var(--green)"></span>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-sm btn-blue" style="width:auto;padding:6px 12px" onclick="goProfile()">Profile</button>
+      <button class="btn btn-sm btn-muted" style="width:auto;padding:6px 12px" onclick="doLogout()">Out</button>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+  <div style="margin-bottom:40px;text-align:center">
+    <div class="logo-wrap">
+      <div class="logo-ring"></div><div class="logo-ring"></div><div class="logo-ring"></div>
+      <span style="font-size:62px;line-height:1;position:relative">🎯</span>
+    </div>
+    <div class="title-xl" style="margin-top:12px">MAN<br/><span style="color:var(--red)">HUNT</span></div>
+    <div class="mono gap" style="font-size:10px;letter-spacing:4px;color:var(--red)">REAL-WORLD GPS GAME</div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <button class="btn btn-fill" onclick="goCreate()">Create Game</button>
+    <button class="btn"          onclick="goJoin()">Join Game</button>
+    <button class="btn btn-blue" onclick="goHistory()">Game History</button>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- ══════════════════════ CREATE ════════════════════════════════════════ -->
+<div id="screen-create" class="screen">
+  <button class="btn btn-sm btn-muted" style="width:auto;padding:8px 14px;margin-bottom:14px" onclick="showScreen('home')">← Back</button>
+  <div class="title-lg">New Game</div>
+
+  <div class="card gap">
+    <span class="label label-yellow">Game Code</span>
+    <div id="create-code" class="mono" style="font-size:44px;font-weight:900;letter-spacing:8px;color:var(--yellow)"></div>
+    <div class="mono muted" style="font-size:10px;margin-top:4px">Share this with players</div>
+  </div>
+
+  <div class="card gap">
+    <span class="label label-red">Number of Hunters</span>
+    <div class="row" style="justify-content:center;gap:20px">
+      <button class="btn btn-icon btn-red" onclick="changeHunters(-1)">−</button>
+      <div id="hunter-count" style="font-size:48px;font-weight:900;color:var(--red);width:60px;text-align:center">1</div>
+      <button class="btn btn-icon btn-red" onclick="changeHunters(1)">+</button>
+    </div>
+  </div>
+
+  <!-- Host role -->
+  <div class="card gap">
+    <span class="label">Your Role</span>
+    <div class="btn-row">
+      <button id="btn-play" class="btn btn-sm" style="color:var(--green);border-color:var(--green)" onclick="setHostMode('play')">🎮 Play</button>
+      <button id="btn-spec" class="btn btn-sm btn-muted" onclick="setHostMode('spectate')">👁 Spectate Only</button>
+    </div>
+    <div id="spec-desc" class="mono muted gap" style="font-size:10px;line-height:1.8;display:none">
+      You see everyone's live location at all times and can manually ping any runner to all hunters.
+    </div>
+  </div>
+
+  <!-- Boundary drawing -->
+  <div class="card gap">
+    <span class="label label-blue">Play Boundary <span class="mono muted" style="font-size:9px">(optional)</span></span>
+    <div class="mono muted" style="font-size:11px;line-height:1.8;margin-bottom:10px">
+      Tap the map to place points and draw a play area. Anyone outside gets exposed to all players for 25 seconds.
+    </div>
+    <div id="boundary-map" style="height:210px;border-radius:6px;border:1px solid var(--border);overflow:hidden"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button id="draw-btn" class="btn btn-sm btn-blue" onclick="toggleDraw()">✏ Draw</button>
+      <button class="btn btn-sm btn-muted" onclick="clearBoundary()">Clear</button>
+    </div>
+    <div id="boundary-hint" class="mono muted" style="font-size:10px;margin-top:6px;min-height:14px"></div>
+  </div>
+
+  <div class="card gap">
+    <span class="label">Rules</span>
+    <div class="mono muted" style="font-size:11px;line-height:2.2">
+      Escape: <span style="color:var(--green)">10 min</span> &nbsp; Ping every: <span style="color:var(--yellow)">3 min</span><br/>
+      Catch radius: <span style="color:var(--red)">8 metres</span> &nbsp; OOB exposure: <span style="color:var(--blue)">25 sec</span>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+  <button class="btn btn-fill gap-lg" onclick="createAndLobby()">Create → Lobby</button>
+</div>
+
+<!-- ══════════════════════ JOIN ══════════════════════════════════════════ -->
+<div id="screen-join" class="screen">
+  <button class="btn btn-sm btn-muted" style="width:auto;padding:8px 14px;margin-bottom:14px" onclick="showScreen('home')">← Back</button>
+  <div class="title-lg">Join Game</div>
+  <div class="card gap">
+    <span class="label">Game Code</span>
+    <input type="text" id="join-input" class="code-input" placeholder="A1B2C3"
+      maxlength="6" autocomplete="off" autocorrect="off" spellcheck="false"
+      oninput="this.value=this.value.toUpperCase();onJoinInput()"/>
+  </div>
+  <div class="card gap card-green">
+    <span class="label">How It Works</span>
+    <div class="mono muted" style="font-size:11px;line-height:2">
+      Roles are randomly assigned when the host starts the game.
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <button id="join-btn" class="btn btn-fill" onclick="joinAndLobby()" disabled>Join →</button>
+</div>
+
+<!-- ═══════════════════════ LOBBY ════════════════════════════════════════ -->
+<div id="screen-lobby" class="screen">
+  <div class="row" style="justify-content:space-between;align-items:flex-start">
+    <div>
+      <div class="mono muted" style="font-size:9px;letter-spacing:3px">LOBBY</div>
+      <div id="lobby-code" class="mono" style="font-size:38px;font-weight:900;color:var(--yellow);letter-spacing:5px"></div>
+    </div>
+    <div id="gps-status" class="mono" style="font-size:11px;color:var(--yellow);text-align:right">
+      <span class="spin">⊙</span> GPS…
+    </div>
+  </div>
+
+  <div class="card gap">
+    <span class="label">Players</span>
+    <div id="player-list"></div>
+  </div>
+
+  <div id="lobby-wait" class="card gap card-green" style="display:none;text-align:center;padding:22px">
+    <div style="font-size:26px" class="pulse">⏳</div>
+    <div class="mono muted gap" style="font-size:11px;letter-spacing:2px">WAITING FOR HOST</div>
+    <div class="mono" style="font-size:10px;color:#1a3a1a;margin-top:6px">Code: <span style="color:var(--yellow)" id="wait-code"></span></div>
+  </div>
+
+  <div class="spacer"></div>
+  <button id="start-btn" class="btn btn-fill" onclick="hostStart()" style="display:none">Start Game →</button>
+</div>
+
+<!-- ════════════════════════ GAME ════════════════════════════════════════ -->
+<div id="screen-game" class="screen">
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-timer" style="flex:1">
+      <div id="phase-lbl" class="phase-lbl" style="color:var(--green)">ESCAPE PHASE</div>
+      <div id="timer-val" class="time-val"  style="color:var(--green)">10:00</div>
+    </div>
+    <div id="role-chip" class="hud-chip" style="border-color:rgba(0,255,157,.3)">
+      <div id="chip-icon">🏃</div>
+      <div id="chip-label" class="chip-label" style="color:var(--green)">RUNNER</div>
+    </div>
+    <div id="ping-chip" class="hud-chip" style="display:none;border-color:rgba(255,77,109,.3)">
+      <div id="ping-val" class="chip-val" style="color:var(--red)">3:00</div>
+      <div class="chip-label muted" style="font-size:9px">PING</div>
+    </div>
+    <button id="spec-ping-btn" class="btn btn-sm btn-red" style="display:none;width:auto;padding:8px 10px;font-size:10px" onclick="spectatorPing()">📡 PING ALL</button>
+  </div>
+
+  <!-- Map -->
+  <div id="map-wrap">
+    <div id="map"></div>
+
+    <div id="ov-acquiring" class="map-overlay">
+      <div class="spin" style="font-size:36px;color:var(--green)">⊙</div>
+      <div class="mono gap" style="font-size:12px;letter-spacing:3px;color:var(--green)">ACQUIRING GPS…</div>
+      <div class="mono" style="font-size:10px;color:var(--muted);max-width:220px;text-align:center;line-height:1.9;margin-top:8px">
+        Allow location access when prompted. Go outdoors for best accuracy.
+      </div>
+    </div>
+
+    <div id="ov-phase" class="map-overlay" style="display:none">
+      <div id="phase-box" class="phase-box">
+        <div id="pb-icon"  class="pb-icon"></div>
+        <div id="pb-title" class="pb-title"></div>
+        <div id="pb-sub"   class="pb-sub"></div>
+      </div>
+    </div>
+
+    <div id="ov-info" class="map-overlay" style="display:none">
+      <div id="info-label" class="label" style="font-size:9px;margin-bottom:4px">INFO</div>
+      <div id="info-body"  class="mono"  style="font-size:11px;line-height:1.9"></div>
+      <div id="info-sub"   class="mono muted" style="font-size:9px;margin-top:4px"></div>
+    </div>
+
+    <div id="ov-oob" class="map-overlay" style="display:none">
+      <div class="mono" style="font-size:10px;color:var(--red);letter-spacing:2px">⚠ OUT OF BOUNDS</div>
+      <div id="oob-count" class="mono" style="font-size:28px;font-weight:900;color:var(--red);line-height:1.1">25</div>
+      <div class="mono muted" style="font-size:9px">All players see you</div>
+    </div>
+
+    <div id="ov-caught" class="map-overlay" style="display:none">
+      <div style="font-size:50px">🔴</div>
+      <div class="mono" style="font-size:20px;font-weight:900;color:var(--red);letter-spacing:3px;margin-top:8px">YOU'VE BEEN CAUGHT</div>
+      <div class="mono muted" style="font-size:11px;margin-top:6px">Game continues for other runners</div>
+    </div>
+  </div>
+
+  <!-- Bottom -->
+  <div id="bottom-panel">
+    <div id="event-log"></div>
+    <button class="btn btn-sm btn-red" onclick="confirmEnd()">End Game</button>
+  </div>
+</div>
+
+<!-- ════════════════════ LEADERBOARD ════════════════════════════════════ -->
+<div id="screen-leaderboard" class="screen">
+  <div style="text-align:center;padding:10px 0 14px">
+    <div style="font-size:50px">🏁</div>
+    <div class="title-lg" style="margin-top:8px">Game Over</div>
+    <div id="lb-code" class="mono muted" style="font-size:10px;letter-spacing:3px;margin-top:6px"></div>
+  </div>
+
+  <div id="lb-role-card" class="card"></div>
+
+  <div class="card gap">
+    <span class="label">All Players</span>
+    <div id="lb-players"></div>
+  </div>
+
+  <div class="card gap">
+    <span class="label">Your Stats</span>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-lbl">DISTANCE</div><div id="s-dist" class="stat-val" style="color:var(--green)">—</div></div>
+      <div class="stat-box"><div class="stat-lbl">TOP SPEED</div><div id="s-spd"  class="stat-val" style="color:var(--yellow)">—</div></div>
+      <div class="stat-box"><div class="stat-lbl">HUNT TIME</div><div id="s-time" class="stat-val" style="color:var(--blue)">—</div></div>
+      <div class="stat-box"><div class="stat-lbl">KILLS</div>    <div id="s-kills"class="stat-val" style="color:var(--red)">—</div></div>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+  <button class="btn btn-fill gap-lg" onclick="newGame()">New Game</button>
+</div>
+
+<!-- ═════════════════════ GAME HISTORY ══════════════════════════════════ -->
+<div id="screen-history" class="screen">
+  <button class="btn btn-sm btn-muted" style="width:auto;padding:8px 14px;margin-bottom:14px" onclick="showScreen('home')">← Back</button>
+  <div class="title-lg">Game History</div>
+  <div id="history-list" style="margin-top:12px"></div>
+</div>
+
+<!-- ═════════════════════ GAME DETAIL ═══════════════════════════════════ -->
+<div id="screen-game-detail" class="screen">
+  <button class="btn btn-sm btn-muted" style="width:auto;padding:8px 14px;margin-bottom:14px" onclick="showScreen('history')">← Back</button>
+  <div id="detail-header"></div>
+  <div id="detail-body" style="margin-top:12px"></div>
+</div>
+
+<!-- ══════════════════════ PROFILE ═══════════════════════════════════════ -->
+<div id="screen-profile" class="screen">
+  <button class="btn btn-sm btn-muted" style="width:auto;padding:8px 14px;margin-bottom:14px" onclick="showScreen('home')">← Back</button>
+
+  <div class="row gap" style="margin-bottom:16px">
+    <img id="profile-pic" class="profile-avatar" src="" alt="" style="display:none"/>
+    <div id="profile-emoji" style="font-size:54px;display:none">👤</div>
+    <div>
+      <div id="profile-name" class="title-lg" style="font-size:26px"></div>
+      <div class="mono muted" style="font-size:9px;letter-spacing:2px;margin-top:2px">CAREER STATS</div>
+    </div>
+  </div>
+
+  <!-- Change photo -->
+  <button class="btn btn-sm btn-blue" style="width:auto;padding:7px 14px;margin-bottom:10px" onclick="document.getElementById('profile-pic-input').click()">Change Photo</button>
+  <input type="file" id="profile-pic-input" accept="image/*" style="display:none" onchange="changeProfilePic(this)"/>
+
+  <div class="card">
+    <span class="label">Medals</span>
+    <div id="profile-medals" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px"></div>
+  </div>
+
+  <div class="card gap">
+    <span class="label">Lifetime</span>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-lbl">TOTAL KILLS</div><div id="p-kills" class="stat-val" style="color:var(--red)">0</div></div>
+      <div class="stat-box"><div class="stat-lbl">TOP SPEED</div>  <div id="p-spd"   class="stat-val" style="color:var(--yellow)">0</div></div>
+      <div class="stat-box"><div class="stat-lbl">GAMES</div>      <div id="p-games" class="stat-val" style="color:var(--green)">0</div></div>
+      <div class="stat-box"><div class="stat-lbl">CAUGHT</div>     <div id="p-caught"class="stat-val" style="color:var(--blue)">0</div></div>
+    </div>
+  </div>
+
+  <div class="card gap">
+    <span class="label">Recent Games</span>
+    <div id="p-recent"></div>
+  </div>
+</div>
+
+</div><!-- #app -->
+
+<!-- Confirm End Game -->
+<div id="confirm-overlay">
+  <div style="background:#080e18;border:1px solid rgba(255,77,109,.4);border-radius:10px;padding:28px 22px;width:100%;max-width:340px">
+    <div class="mono" style="font-size:18px;font-weight:900;color:var(--red);margin-bottom:8px">End Game?</div>
+    <div class="mono muted" style="font-size:12px;line-height:1.9;margin-bottom:20px">
+      This ends the game for all players and saves results to everyone's history.
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-fill-red" style="flex:1" onclick="doEndGame()">Yes, End It</button>
+      <button class="btn btn-muted"    style="flex:1" onclick="closeConfirm()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="mono"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
