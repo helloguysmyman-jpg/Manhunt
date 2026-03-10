@@ -1,0 +1,164 @@
+// ─── MANHUNT Service Worker ───────────────────────────────────────────────
+// Handles: offline caching, asset versioning, background GPS keepalive hint
+
+const CACHE_NAME = 'manhunt-v1';
+
+// Assets to cache on install (app shell)
+const PRECACHE = [
+  '/',
+  '/index.html',
+  '/app.js',
+  '/style.css',
+  '/manifest.json',
+  // Leaflet from CDN — cache at runtime on first fetch
+];
+
+// CDN assets to cache at runtime
+const CDN_CACHE = 'manhunt-cdn-v1';
+const CDN_ORIGINS = [
+  'https://cdnjs.cloudflare.com',
+  'https://fonts.googleapis.com',
+  'https://fonts.gstatic.com',
+];
+
+// Map tile cache (OpenStreetMap)
+const TILE_CACHE = 'manhunt-tiles-v1';
+const TILE_MAX = 500; // cap tile cache entries
+
+// ─── Install: pre-cache app shell ────────────────────────────────────────
+self.addEventListener('install', event => {
+  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE)).catch(() => {})
+  );
+});
+
+// ─── Activate: clean old caches ──────────────────────────────────────────
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(
+        keys
+          .filter(k => ![CACHE_NAME, CDN_CACHE, TILE_CACHE].includes(k))
+          .map(k => caches.delete(k))
+      )
+    ).then(() => self.clients.claim())
+  );
+});
+
+// ─── Fetch: routing strategy ──────────────────────────────────────────────
+self.addEventListener('fetch', event => {
+  const { request } = event;
+  const url = new URL(request.url);
+
+  // 1. Map tiles — cache-first, then network, bounded cache
+  if (url.hostname.includes('tile.openstreetmap.org')) {
+    event.respondWith(tileStrategy(request));
+    return;
+  }
+
+  // 2. CDN assets (Leaflet, fonts) — cache-first
+  if (CDN_ORIGINS.some(o => request.url.startsWith(o))) {
+    event.respondWith(cdnStrategy(request));
+    return;
+  }
+
+  // 3. Firebase / API calls — network only, no cache
+  if (url.hostname.includes('firebase') || url.hostname.includes('firebaseio.com')) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  // 4. App shell — cache-first, fall back to index.html for SPA routing
+  event.respondWith(appShellStrategy(request));
+});
+
+async function tileStrategy(request) {
+  const cache = await caches.open(TILE_CACHE);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      // Enforce max tile cache size
+      const keys = await cache.keys();
+      if (keys.length >= TILE_MAX) await cache.delete(keys[0]);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    return new Response('', { status: 503 });
+  }
+}
+
+async function cdnStrategy(request) {
+  const cache = await caches.open(CDN_CACHE);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  try {
+    const response = await fetch(request);
+    if (response.ok) cache.put(request, response.clone());
+    return response;
+  } catch {
+    return new Response('', { status: 503 });
+  }
+}
+
+async function appShellStrategy(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  try {
+    const response = await fetch(request);
+    if (response.ok) cache.put(request, response.clone());
+    return response;
+  } catch {
+    // SPA fallback
+    return cache.match('/index.html');
+  }
+}
+
+// ─── Background Sync (future: queue missed pings) ─────────────────────────
+self.addEventListener('sync', event => {
+  if (event.tag === 'sync-pings') {
+    event.waitUntil(syncPendingPings());
+  }
+});
+
+async function syncPendingPings() {
+  // When back online, flush any pings that failed during connectivity loss.
+  // In production: read from IndexedDB queue, POST to Firebase.
+  const clients = await self.clients.matchAll();
+  clients.forEach(c => c.postMessage({ type: 'SYNC_COMPLETE' }));
+}
+
+// ─── Push Notifications (future: hunter ping alerts) ─────────────────────
+self.addEventListener('push', event => {
+  if (!event.data) return;
+  const data = event.data.json();
+
+  const options = {
+    body: data.body || 'Location ping received',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    tag: data.tag || 'manhunt-ping',
+    renotify: true,
+    vibrate: [200, 100, 200],
+    data: { url: data.url || '/' },
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'MANHUNT', options)
+  );
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window' }).then(clients => {
+      const existing = clients.find(c => c.url && c.focus);
+      if (existing) return existing.focus();
+      return self.clients.openWindow('/');
+    })
+  );
+});

@@ -1,0 +1,36 @@
+{
+  "rules": {
+    "games": {
+      "$gameCode": {
+        // Anyone authenticated can read game meta and player list
+        "meta": {
+          ".read":  "auth != null",
+          ".write": "auth != null && (!data.exists() || data.child('hostUid').val() === auth.uid)"
+        },
+        "players": {
+          ".read": "auth != null",
+          "$uid": {
+            // Players can only write their own record
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "newData.hasChildren(['displayName', 'caught', 'joinedAt'])"
+          }
+        },
+        "pings": {
+          // Runners write their own pings
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".read":  "auth != null",
+            "$pingId": {
+              ".validate": "newData.hasChildren(['lat', 'lng', 'ts'])"
+            }
+          }
+        },
+        "events": {
+          ".read":  "auth != null",
+          // Only host writes events (enforce in app logic too)
+          ".write": "auth != null"
+        }
+      }
+    }
+  }
+}
