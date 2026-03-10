@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#05080d"/>
+<title>MANHUNT</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;700;900&display=swap');
+:root{--green:#00ff9d;--red:#ff4d6d;--yellow:#ffd166;--blue:#a8dadc;--bg:#05080d;--bg2:#080e18;--bg3:#040709;--border:#0f1f2f;--muted:#334455}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:#dde;font-family:'Barlow Condensed',sans-serif}
+button{font-family:inherit;cursor:pointer;-webkit-appearance:none;border:none;background:none}
+input,select{font-family:inherit;-webkit-appearance:none}
+#app{height:100%;display:flex;flex-direction:column;max-width:430px;margin:0 auto;position:relative;overflow:hidden}
+.screen{display:none;flex-direction:column;height:100%;overflow-y:auto;padding:28px 20px 52px;-webkit-overflow-scrolling:touch}
+.screen.active{display:flex}
+#screen-game{padding:0;overflow:hidden}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-thumb{background:rgba(0,255,157,.1)}
+.mono{font-family:'Share Tech Mono',monospace}
+.title-xl{font-size:64px;font-weight:900;letter-spacing:-2px;line-height:.9;color:#fff}
+.title-lg{font-size:32px;font-weight:900;letter-spacing:-1px;color:#fff}
+.lbl{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--green);display:block;margin-bottom:8px}
+.lbl-red{color:var(--red)!important}.lbl-yellow{color:var(--yellow)!important}.lbl-blue{color:var(--blue)!important}.muted{color:var(--muted)}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px}
+.card-green{border-color:rgba(0,255,157,.15);background:rgba(0,255,157,.03)}
+.gap{margin-top:10px}.gap-lg{margin-top:18px}
+.btn{display:block;width:100%;background:transparent;border:1px solid currentColor;padding:14px 18px;font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:2px;text-transform:uppercase;border-radius:5px;transition:opacity .15s,transform .1s;color:var(--green)}
+.btn:active{opacity:.6;transform:scale(.98)}
+.btn-red{color:var(--red)}.btn-blue{color:var(--blue);border-color:rgba(168,218,220,.4)}.btn-muted{color:var(--muted);border-color:var(--muted)}
+.btn-fill{background:var(--green);color:var(--bg);font-weight:900;border-color:var(--green)}
+.btn-fill-red{background:var(--red);color:#fff;font-weight:900;border-color:var(--red)}
+.btn-sm{padding:9px 14px;font-size:11px}.btn-icon{width:44px;flex-shrink:0;padding:10px 0;font-size:20px}
+.btn-row{display:flex;gap:8px}.btn-row .btn{flex:1;margin:0}
+.btn:disabled{opacity:.3;pointer-events:none}
+input[type=text],input[type=email],input[type=password]{width:100%;background:var(--bg3);border:1px solid #1a2a2a;color:#e0e0e0;padding:13px 15px;border-radius:5px;outline:none;transition:border-color .2s;font-size:16px}
+input:focus{border-color:rgba(0,255,157,.35)}
+input.code-input{font-family:'Share Tech Mono',monospace;font-size:26px;letter-spacing:6px;text-transform:uppercase;text-align:center}
+select{width:100%;background:var(--bg3);border:1px solid #1a2a2a;color:#e0e0e0;padding:13px 15px;border-radius:5px;outline:none;font-size:15px;-webkit-appearance:none;appearance:none}
+select:focus{border-color:rgba(0,255,157,.35)}
+.input-lbl{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);display:block;margin-bottom:6px;margin-top:14px}
+.input-lbl:first-child{margin-top:0}
+.row{display:flex;align-items:center;gap:10px}.spacer{flex:1}
+.err{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--red);margin-top:8px;min-height:16px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes ring{0%{transform:scale(.6);opacity:.9}100%{transform:scale(3.2);opacity:0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes slideup{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
+.pulse{animation:pulse 1.6s ease-in-out infinite}.spin{display:inline-block;animation:spin 1.8s linear infinite}
+.logo-wrap{position:relative;display:inline-block}
+.logo-ring{position:absolute;inset:-6px;border-radius:50%;border:1px solid var(--red);opacity:0;animation:ring 2.6s ease-out infinite}
+.logo-ring:nth-child(2){animation-delay:.85s}.logo-ring:nth-child(3){animation-delay:1.7s}
+#auth-tabs{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:16px}
+.auth-tab{flex:1;padding:11px;text-align:center;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;background:transparent;color:var(--muted);transition:all .2s}
+.auth-tab.active{background:var(--bg2);color:var(--green)}
+.avatar-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:6px}
+.av{width:80px;height:80px;border-radius:50%;border:2px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:32px;overflow:hidden;flex-shrink:0}
+.av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.av-sm{width:36px;height:36px;font-size:16px}.av-lg{width:72px;height:72px;font-size:36px;border-color:var(--green)}
+.player-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);animation:slideup .2s ease;margin-bottom:8px}
+.p-badge{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;padding:3px 7px;border-radius:2px;border:1px solid;margin-left:auto}
+/* role pill select in lobby */
+.role-sel{background:var(--bg3);border:1px solid var(--muted);color:var(--muted);padding:4px 8px;border-radius:4px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;-webkit-appearance:none;appearance:none;cursor:pointer}
+.role-sel:focus{outline:none;border-color:var(--green)}
+#hud{background:var(--bg);border-bottom:1px solid var(--border);padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top,0px));display:flex;gap:8px;align-items:center;flex-shrink:0;z-index:900}
+.hud-timer .phase-lbl{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:3px}
+.hud-timer .time-val{font-family:'Share Tech Mono',monospace;font-size:30px;font-weight:900;line-height:1}
+.hud-chip{padding:7px 10px;border-radius:6px;text-align:center;border:1px solid;flex-shrink:0}
+.chip-icon{font-size:15px;line-height:1}.chip-lbl{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;margin-top:2px}
+.chip-val{font-family:'Share Tech Mono',monospace;font-size:17px;font-weight:900;line-height:1}
+#map-wrap{flex:1;position:relative;overflow:hidden}
+#map{height:100%;width:100%}
+.leaflet-container{font-family:'Share Tech Mono',monospace;background:#080e18}
+.leaflet-control-zoom a{background:#080e18!important;color:var(--green)!important;border-color:#1a2a2a!important}
+.leaflet-control-attribution{font-size:8px!important;background:rgba(5,8,13,.7)!important;color:#223!important}
+.leaflet-control-attribution a{color:#334!important}
+.leaflet-popup-content-wrapper{background:#080e18;color:#ccc;border:1px solid var(--border);border-radius:6px;font-family:'Share Tech Mono',monospace;font-size:11px}
+.leaflet-popup-tip{background:#080e18}
+.map-ov{position:absolute;z-index:800;font-family:'Share Tech Mono',monospace;pointer-events:none}
+#ov-gps{inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);gap:10px}
+#ov-phase{bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(5,8,13,.95) 55%);padding:52px 20px 14px;text-align:center}
+.pbox{display:inline-block;border-radius:8px;border:1px solid;padding:12px 22px}
+.pbox .pb-ic{font-size:20px}.pbox .pb-title{font-size:13px;letter-spacing:2px;margin-top:4px}.pbox .pb-sub{font-size:10px;color:var(--muted);margin-top:4px}
+#ov-info{top:10px;left:10px;max-width:200px;background:rgba(5,8,13,.93);border-radius:8px;padding:10px 12px;border:1px solid rgba(0,255,157,.18)}
+#ov-oob{top:10px;right:10px;background:rgba(255,77,109,.15);border:1px solid rgba(255,77,109,.6);border-radius:8px;padding:10px 13px;text-align:center}
+#ov-caught{inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,77,109,.12);backdrop-filter:blur(2px);text-align:center;gap:8px}
+.m-me{width:18px;height:18px;border-radius:50%;border:3px solid #fff}
+.m-ping{width:13px;height:13px;border-radius:50%;border:2px solid #fff;background:var(--yellow)}
+.m-ping-lbl{position:absolute;top:-20px;left:50%;transform:translateX(-50%);background:#080e18;color:var(--yellow);font-size:9px;padding:2px 5px;border-radius:2px;white-space:nowrap;border:1px solid rgba(255,209,102,.3);font-family:'Share Tech Mono',monospace}
+#bottom-panel{background:var(--bg);border-top:1px solid var(--border);padding:8px 14px calc(8px + env(safe-area-inset-bottom,0px));flex-shrink:0;z-index:900}
+#event-log{max-height:60px;overflow-y:auto;margin-bottom:6px}
+#event-log::-webkit-scrollbar{width:0}
+.ev{font-size:11px;line-height:1.9;animation:slideup .2s ease}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat-box{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px}
+.stat-lbl{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:4px}
+.stat-val{font-size:24px;font-weight:900}
+.medal-item{text-align:center}.medal-ic{font-size:30px}.medal-lbl{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-top:2px}
+.hist-item{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:8px;cursor:pointer}
+#confirm-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;align-items:center;justify-content:center;padding:24px}
+#confirm-ov.open{display:flex}
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:#0a141e;border:1px solid var(--border);border-radius:6px;padding:10px 18px;font-family:'Share Tech Mono',monospace;font-size:12px;white-space:nowrap;transition:transform .3s ease;z-index:9999;pointer-events:none}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#draw-btn.on{color:var(--green);border-color:var(--green);background:rgba(0,255,157,.08)}
+.spinner-row{display:flex;align-items:center;gap:16px;justify-content:center}
+.spinner-val{font-size:38px;font-weight:900;min-width:80px;text-align:center}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- AUTH -->
+<div id="screen-auth" class="screen">
+  <div class="spacer"></div>
+  <div style="text-align:center;margin-bottom:32px">
+    <div class="logo-wrap"><div class="logo-ring"></div><div class="logo-ring"></div><div class="logo-ring"></div><span style="font-size:58px;line-height:1;position:relative">🎯</span></div>
+    <div class="title-xl" style="margin-top:10px">MAN<br/><span style="color:var(--red)">HUNT</span></div>
+  </div>
+  <div id="auth-tabs">
+    <button id="tab-login" class="auth-tab active" onclick="authTab('login')">Sign In</button>
+    <button id="tab-signup" class="auth-tab" onclick="authTab('signup')">Create Account</button>
+  </div>
+  <div id="form-login">
+    <div class="card gap">
+      <label class="input-lbl">Email</label>
+      <input type="email" id="l-email" placeholder="you@example.com" autocomplete="email"/>
+      <label class="input-lbl">Password</label>
+      <input type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password"/>
+      <div id="l-err" class="err"></div>
+    </div>
+    <button class="btn btn-fill gap-lg" onclick="doLogin()">Sign In →</button>
+  </div>
+  <div id="form-signup" style="display:none">
+    <div class="card gap">
+      <div class="avatar-wrap">
+        <div class="av" id="av-prev">👤</div>
+        <button type="button" class="btn btn-blue btn-sm" style="width:auto;padding:7px 16px" onclick="document.getElementById('av-input').click()">+ Add Photo</button>
+        <input type="file" id="av-input" accept="image/*" style="display:none" onchange="pickAv(this)"/>
+      </div>
+      <label class="input-lbl">Display Name</label>
+      <input type="text" id="s-name" placeholder="Your name in game" autocomplete="nickname"/>
+      <label class="input-lbl">Email</label>
+      <input type="email" id="s-email" placeholder="you@example.com" autocomplete="email"/>
+      <label class="input-lbl">Password</label>
+      <input type="password" id="s-pass" placeholder="6+ characters" autocomplete="new-password"/>
+      <div id="s-err" class="err"></div>
+    </div>
+    <button class="btn btn-fill gap-lg" onclick="doSignup()">Create Account →</button>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- HOME -->
+<div id="screen-home" class="screen">
+  <div class="row" style="justify-content:space-between;margin-bottom:4px">
+    <div class="row" style="gap:10px">
+      <div class="av av-sm" id="home-av">👤</div>
+      <span class="mono muted" style="font-size:11px">Hello, <span id="home-name" style="color:var(--green)"></span></span>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-blue btn-sm" style="width:auto;padding:6px 12px" onclick="goProfile()">Profile</button>
+      <button class="btn btn-muted btn-sm" style="width:auto;padding:6px 12px" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <div style="margin-bottom:40px;text-align:center">
+    <div class="logo-wrap"><div class="logo-ring"></div><div class="logo-ring"></div><div class="logo-ring"></div><span style="font-size:62px;line-height:1;position:relative">🎯</span></div>
+    <div class="title-xl" style="margin-top:12px">MAN<br/><span style="color:var(--red)">HUNT</span></div>
+    <div class="mono gap" style="font-size:10px;letter-spacing:4px;color:var(--red)">REAL-WORLD GPS GAME</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <button class="btn btn-fill" onclick="goCreate()">Create Game</button>
+    <button class="btn" onclick="goJoin()">Join Game</button>
+    <button class="btn btn-blue" onclick="goHistory()">Game History</button>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- CREATE -->
+<div id="screen-create" class="screen">
+  <button class="btn btn-muted btn-sm" style="width:auto;padding:8px 14px;margin-bottom:14px" onclick="show('home')">← Back</button>
+  <div class="title-lg">New Game</div>
+  <div class="card gap">
+    <span class="lbl lbl-yellow">Game Code</span>
+    <div id="c-code" class="mono" style="font-size:44px;font-weight:900;letter-spacing:8px;color:var(--yellow)"></div>
+    <div class="mono muted" style="font-size:10px;margin-top:4px">Share this with players to join</div>
+  </div>
+
+  <!-- Hunters -->
+  <div class="card gap">
+    <span class="lbl lbl-red">Number of Hunters</span>
+    <div class="spinner-row">
+      <button class="btn btn-icon btn-red" onclick="chHunters(-1)">−</button>
+      <div id="h-count" class="spinner-val" style="color:var(--red)">1</div>
+      <button class="btn btn-icon btn-red" onclick="chHunters(1)">+</button>
+    </div>
+  </div>
+
+  <!-- Timers & rules -->
+  <div class="card gap">
+    <span class="lbl">Game Settings</span>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
+      <div>
+        <div class="input-lbl" style="margin-top:0">Escape Time</div>
+        <select id="cfg-escape">
+          <option value="120">2 min</option>
+          <option value="300">5 min</option>
+          <option value="600" selected>10 min</option>
+          <option value="900">15 min</option>
+          <option value="1200">20 min</option>
+        </select>
+      </div>
+      <div>
+        <div class="input-lbl" style="margin-top:0">Ping Interval</div>
+        <select id="cfg-ping">
+          <option value="60">1 min</option>
+          <option value="120">2 min</option>
+          <option value="180" selected>3 min</option>
+          <option value="300">5 min</option>
+          <option value="600">10 min</option>
+        </select>
+      </div>
+      <div>
+        <div class="input-lbl" style="margin-top:0">Catch Radius</div>
+        <select id="cfg-catch">
+          <option value="5">5 metres</option>
+          <option value="8" selected>8 metres</option>
+          <option value="12">12 metres</option>
+          <option value="20">20 metres</option>
+        </select>
+      </div>
+      <div>
+        <div class="input-lbl" style="margin-top:0">OOB Exposure</div>
+        <select id="cfg-oob">
+          <option value="10">10 sec</option>
+          <option value="25" selected>25 sec</option>
+          <option value="45">45 sec</option>
+          <option value="60">60 sec</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Host role -->
+  <div class="card gap">
+    <span class="lbl">Your Role</span>
+    <div class="btn-row">
+      <button id="btn-play" class="btn btn-sm" style="color:var(--green);border-color:var(--green)" onclick="setMode('play')">🎮 Play</button>
+      <button id="btn-spec" class="btn btn-sm btn-muted" onclick="setMode('spectate')">👁 Spectate</button>
+    </div>
+    <div id="spec-info" class="mono muted gap" style="font-size:10px;line-height:1.8;display:none">See everyone live. Force-ping runners to hunters at any time.</div>
+  </div>
+
+  <!-- Boundary -->
+  <div class="card gap">
+    <span class="lbl lbl-blue">Play Boundary <span class="muted" style="font-size:9px">(optional)</span></span>
+    <div class="mono muted" style="font-size:11px;line-height:1.8;margin-bottom:10px">Tap "Draw" then tap the map to set boundary points. Anyone outside gets exposed for the OOB duration above.</div>
+    <div id="bmap" style="height:200px;border-radius:6px;border:1px solid var(--border);overflow:hidden"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button id="draw-btn" class="btn btn-blue btn-sm" onclick="toggleDraw()">✏ Draw</button>
+      <button class="btn btn-muted btn-sm" onclick="clearBounds()">Clear</button>
+    </div>
+    <div id="bmap-hint" class="mono muted" style="font-size:10px;margin-top:6px;min-height:14px">Tap Draw, then tap map to place points.</div>
+  </div>
+
+  <div class="spacer"></div>
+  <button class="btn btn-fill gap-lg" onclick="createLobby()">Create → Lobby</button>
+</div>
+
+<!-- JOIN -->
+<div id="screen-join" class="screen">
+  <button class="btn btn-muted btn-sm" style="width:auto;padding:8px 14px;margin-bottom:14px" onclick="show('home')">← Back</button>
+  <div class="title-lg">Join Game</div>
+  <div class="card gap">
+    <span class="lbl">Game Code</span>
+    <input type="text" id="j-code" class="code-input" placeholder="A1B2C3" maxlength="6"
+      autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"
+      oninput="checkJoinCode()" onkeyup="checkJoinCode()"/>
+    <div id="j-err" class="err"></div>
+  </div>
+  <div class="card gap card-green">
+    <span class="lbl">How It Works</span>
+    <div class="mono muted" style="font-size:11px;line-height:2">Enter the 6-character code from the host. Roles assigned when the game starts.</div>
+  </div>
+  <div class="spacer"></div>
+  <button id="j-btn" class="btn btn-fill" onclick="joinLobby()">Join →</button>
+</div>
+
+<!-- LOBBY -->
+<div id="screen-lobby" class="screen">
+  <div class="row" style="justify-content:space-between;align-items:flex-start">
+    <div>
+      <div class="mono muted" style="font-size:9px;letter-spacing:3px">LOBBY</div>
+      <div id="lob-code" class="mono" style="font-size:36px;font-weight:900;color:var(--yellow);letter-spacing:5px"></div>
+    </div>
+    <div id="gps-stat" class="mono" style="font-size:11px;color:var(--yellow);text-align:right"><span class="spin">⊙</span> GPS…</div>
+  </div>
+  <div class="card gap">
+    <span class="lbl">Players <span id="role-mode-lbl" class="muted" style="font-size:9px"></span></span>
+    <div id="lob-players"></div>
+  </div>
+  <!-- Host role assignment controls -->
+  <div id="role-controls" class="card gap" style="display:none">
+    <span class="lbl">Role Assignment</span>
+    <div class="btn-row">
+      <button id="btn-random" class="btn btn-sm" style="color:var(--green);border-color:var(--green)" onclick="setRoleMode('random')">🎲 Random</button>
+      <button id="btn-manual" class="btn btn-sm btn-muted" onclick="setRoleMode('manual')">✋ Manual</button>
+    </div>
+    <div id="manual-hint" class="mono muted gap" style="font-size:10px;line-height:1.8;display:none">Use the dropdowns next to each player to assign their role.</div>
+  </div>
+  <div id="lob-wait" class="card gap card-green" style="display:none;text-align:center;padding:22px">
+    <div style="font-size:26px" class="pulse">⏳</div>
+    <div class="mono muted gap" style="font-size:11px;letter-spacing:2px">WAITING FOR HOST</div>
+    <div class="mono" style="font-size:10px;color:#1a3a1a;margin-top:6px">Code: <span style="color:var(--yellow)" id="wait-code"></span></div>
+  </div>
+  <div class="spacer"></div>
+  <button id="start-btn" class="btn btn-fill" onclick="hostStart()" style="display:none">Start Game →</button>
+</div>
+
+<!-- GAME -->
+<div id="screen-game" class="screen">
+  <div id="hud">
+    <div class="hud-timer" style="flex:1">
+      <div id="ph-lbl" class="phase-lbl" style="color:var(--green)">ESCAPE PHASE</div>
+      <div id="ph-time" class="time-val" style="color:var(--green)">10:00</div>
+    </div>
+    <div id="role-chip" class="hud-chip" style="border-color:rgba(0,255,157,.3)">
+      <div id="chip-ic">🏃</div>
+      <div id="chip-lbl" class="chip-lbl" style="color:var(--green)">RUNNER</div>
+    </div>
+    <div id="ping-chip" class="hud-chip" style="display:none;border-color:rgba(255,77,109,.3)">
+      <div id="ping-val" class="chip-val" style="color:var(--red)">3:00</div>
+      <div class="chip-lbl muted" style="font-size:9px">PING</div>
+    </div>
+    <button id="spec-btn" class="btn btn-red btn-sm" style="display:none;width:auto;padding:8px 10px;font-size:10px" onclick="specPing()">📡 PING</button>
+  </div>
+  <div id="map-wrap">
+    <div id="map"></div>
+    <div id="ov-gps" class="map-ov"><div class="spin" style="font-size:36px;color:var(--green)">⊙</div><div class="mono gap" style="font-size:12px;letter-spacing:3px;color:var(--green)">ACQUIRING GPS…</div><div class="mono" style="font-size:10px;color:var(--muted);max-width:220px;text-align:center;line-height:1.9;margin-top:8px">Allow location access. Go outdoors for best accuracy.</div></div>
+    <div id="ov-phase" class="map-ov" style="display:none"><div id="pbox" class="pbox"><div id="pb-ic" class="pb-ic"></div><div id="pb-title" class="pb-title"></div><div id="pb-sub" class="pb-sub"></div></div></div>
+    <div id="ov-info" class="map-ov" style="display:none"><div id="inf-lbl" class="lbl" style="font-size:9px;margin-bottom:4px">INFO</div><div id="inf-body" class="mono" style="font-size:11px;line-height:1.9"></div><div id="inf-sub" class="mono muted" style="font-size:9px;margin-top:4px"></div></div>
+    <div id="ov-oob" class="map-ov" style="display:none"><div class="mono" style="font-size:10px;color:var(--red);letter-spacing:2px">⚠ OUT OF BOUNDS</div><div id="oob-n" class="mono" style="font-size:28px;font-weight:900;color:var(--red);line-height:1.1">25</div><div class="mono muted" style="font-size:9px">All players see you</div></div>
+    <div id="ov-caught" class="map-ov" style="display:none"><div style="font-size:50px">🔴</div><div class="mono" style="font-size:20px;font-weight:900;color:var(--red);letter-spacing:3px;margin-top:8px">YOU'VE BEEN CAUGHT</div><div class="mono muted" style="font-size:11px;margin-top:6px">Game continues for other runners</div></div>
+  </div>
+  <div id="bottom-panel">
+    <div id="event-log"></div>
+    <button class="btn btn-red btn-sm" onclick="confirmEnd()">End Game</button>
+  </div>
+</div>
+
+<!-- LEADERBOARD -->
+<div id="screen-leaderboard" class="screen">
+  <div style="text-align:center;padding:10px 0 14px"><div style="font-size:50px">🏁</div><div class="title-lg" style="margin-top:8px">Game Over</div><div id="lb-code" class="mono muted" style="font-size:10px;letter-spacing:3px;margin-top:6px"></div></div>
+  <div id="lb-role" class="card"></div>
+  <div class="card gap"><span class="lbl">All Players</span><div id="lb-players"></div></div>
+  <div class="card gap">
+    <span class="lbl">Your Stats</span>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-lbl">DISTANCE</div><div id="s-dist" class="stat-val" style="color:var(--green)">—</div></div>
+      <div class="stat-box"><div class="stat-lbl">TOP SPEED</div><div id="s-spd" class="stat-val" style="color:var(--yellow)">—</div></div>
+      <div class="stat-box"><div class="stat-lbl">HUNT TIME</div><div id="s-time" class="stat-val" style="color:var(--blue)">—</div></div>
+      <div class="stat-box"><div class="stat-lbl">KILLS</div><div id="s-kills" class="stat-val" style="color:var(--red)">—</div></div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn btn-fill gap-lg" onclick="newGame()">New Game</button>
+</div>
+
+<!-- HISTORY -->
+<div id="screen-history" class="screen">
+  <button class="btn btn-muted btn-sm" style="width:auto;padding:8px 14px;margin-bottom:14px" onclick="show('home')">← Back</button>
+  <div class="title-lg">Game History</div>
+  <div id="hist-list" style="margin-top:12px"></div>
+</div>
+
+<!-- GAME DETAIL -->
+<div id="screen-game-detail" class="screen">
+  <button class="btn btn-muted btn-sm" style="width:auto;padding:8px 14px;margin-bottom:14px" onclick="show('history')">← Back</button>
+  <div id="det-head"></div><div id="det-body" style="margin-top:12px"></div>
+</div>
+
+<!-- PROFILE -->
+<div id="screen-profile" class="screen">
+  <button class="btn btn-muted btn-sm" style="width:auto;padding:8px 14px;margin-bottom:14px" onclick="show('home')">← Back</button>
+  <div class="row gap" style="margin-bottom:16px;align-items:flex-start">
+    <div class="av av-lg" id="prof-av">👤</div>
+    <div>
+      <div id="prof-name" class="title-lg" style="font-size:26px"></div>
+      <div class="mono muted" style="font-size:9px;letter-spacing:2px;margin-top:2px">CAREER STATS</div>
+      <button class="btn btn-blue btn-sm gap" style="width:auto;padding:6px 12px" onclick="document.getElementById('pic-input').click()">Change Photo</button>
+      <input type="file" id="pic-input" accept="image/*" style="display:none" onchange="changePic(this)"/>
+    </div>
+  </div>
+  <div class="card"><span class="lbl">Medals</span><div id="prof-medals" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px"></div></div>
+  <div class="card gap">
+    <span class="lbl">Lifetime</span>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-lbl">TOTAL KILLS</div><div id="p-kills" class="stat-val" style="color:var(--red)">0</div></div>
+      <div class="stat-box"><div class="stat-lbl">TOP SPEED</div><div id="p-spd" class="stat-val" style="color:var(--yellow)">0</div></div>
+      <div class="stat-box"><div class="stat-lbl">GAMES</div><div id="p-games" class="stat-val" style="color:var(--green)">0</div></div>
+      <div class="stat-box"><div class="stat-lbl">CAUGHT</div><div id="p-caught" class="stat-val" style="color:var(--blue)">0</div></div>
+    </div>
+  </div>
+  <div class="card gap"><span class="lbl">Recent Games</span><div id="p-recent"></div></div>
+</div>
+
+</div>
+
+<div id="confirm-ov">
+  <div style="background:#080e18;border:1px solid rgba(255,77,109,.4);border-radius:10px;padding:28px 22px;width:100%;max-width:340px">
+    <div class="mono" style="font-size:18px;font-weight:900;color:var(--red);margin-bottom:8px">End Game?</div>
+    <div class="mono muted" style="font-size:12px;line-height:1.9;margin-bottom:20px">This ends the game for all players and saves results to everyone's history.</div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-fill-red" style="flex:1" onclick="doEnd()">Yes, End It</button>
+      <button class="btn btn-muted" style="flex:1" onclick="closeConfirm()">Cancel</button>
+    </div>
+  </div>
+</div>
+<div id="toast" class="mono"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+firebase.initializeApp({apiKey:"AIzaSyA9GXHq5N9fczDx_cXdZKrHB8NdSlEz1bE",authDomain:"manhunt-49350.firebaseapp.com",databaseURL:"https://manhunt-49350-default-rtdb.firebaseio.com",projectId:"manhunt-49350",storageBucket:"manhunt-49350.appspot.com",messagingSenderId:"785860141000",appId:"1:785860141000:web:0c07351336d4c9bb702afd"});
+const db=firebase.database(),auth=firebase.auth();
+
+const G={uid:null,name:null,photo:null,isHost:false,isSpec:false,mode:'play',roleMode:'random',code:null,role:null,hunterCount:1,cfgEscape:600,cfgPing:180,cfgCatch:8,cfgOob:25,phase:null,players:{},esc:600,hunt:0,pingCD:180,pings:0,kills:0,caught:false,pos:null,watchId:null,trail:[],topSpd:0,oob:false,oobT:0,oobIv:null,bounds:[],map:null,myM:null,accC:null,pMarkers:{},pingMs:{},lastPings:[],centered:false,ticker:null,refs:[],bMap:null,bLine:null,bDots:[],drawing:false,pendingPhoto:null,wakeLock:null};
+
+const genCode=()=>Math.random().toString(36).slice(2,8).toUpperCase();
+const fmt=s=>{s=Math.max(0,s|0);return`${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`};
+const now=()=>Date.now();
+function hav(a,b,c,d){const R=6371000,f=(c-a)*Math.PI/180,g=(d-b)*Math.PI/180,x=Math.sin(f/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(g/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))}
+function inPoly(lat,lng,poly){if(!poly||poly.length<3)return true;let inside=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const xi=poly[i].lat,yi=poly[i].lng,xj=poly[j].lat,yj=poly[j].lng;if(((yi>lng)!==(yj>lng))&&lat<(xj-xi)*(lng-yi)/(yj-yi)+xi)inside=!inside}return inside}
+function show(s){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById('screen-'+s).classList.add('active')}
+function toast(msg,color='var(--green)'){const t=document.getElementById('toast');t.textContent=msg;t.style.color=color;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2800)}
+function dbSet(p,d){return db.ref(p).set(d)}
+function dbUpd(p,d){return db.ref(p).update(d)}
+function dbPush(p,d){return db.ref(p).push(d)}
+function listen(p,cb){const r=db.ref(p);r.on('value',s=>cb(s.val()));G.refs.push(r)}
+function unlistenAll(){G.refs.forEach(r=>r.off());G.refs=[]}
+function compressImg(dataURL,size,q){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=size;c.height=size;const ctx=c.getContext('2d');const s=Math.min(img.width,img.height);ctx.drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,size,size);res(c.toDataURL('image/jpeg',q))};img.onerror=rej;img.src=dataURL})}
+function setAv(el,photo){if(photo){el.innerHTML=`<img src="${photo}" style="width:100%;height:100%;border-radius:50%;object-fit:cover"/>`;el.style.fontSize='0'}else{el.innerHTML='👤';el.style.fontSize=''}}
+
+// ── AUTH ──────────────────────────────────────────────────────
+auth.onAuthStateChanged(async user=>{
+  if(user){
+    G.uid=user.uid;G.name=user.displayName||user.email.split('@')[0];
+    try{const s=await db.ref(`users/${G.uid}/avatar`).once('value');if(s.exists())G.photo=s.val()}catch(e){}
+    const ps=await db.ref(`users/${G.uid}/profile`).once('value');
+    if(!ps.exists())await dbSet(`users/${G.uid}/profile`,{displayName:G.name,kills:0,caught:0,games:0,topSpeed:0,createdAt:now()});
+    loadHome();show('home');
+  }else{show('auth')}
+});
+
+function authTab(t){
+  document.querySelectorAll('.auth-tab').forEach(x=>x.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  document.getElementById('form-login').style.display=t==='login'?'':'none';
+  document.getElementById('form-signup').style.display=t==='signup'?'':'none';
+}
+function pickAv(input){const f=input.files[0];if(!f)return;const r=new FileReader();r.onload=async e=>{const c=await compressImg(e.target.result,120,.75);G.pendingPhoto=c;setAv(document.getElementById('av-prev'),c)};r.readAsDataURL(f)}
+async function doLogin(){
+  const email=document.getElementById('l-email').value.trim(),pass=document.getElementById('l-pass').value,err=document.getElementById('l-err');err.textContent='';
+  if(!email||!pass){err.textContent='Enter email and password.';return}
+  try{await auth.signInWithEmailAndPassword(email,pass)}catch(e){err.textContent=e.message}
+}
+async function doSignup(){
+  const name=document.getElementById('s-name').value.trim(),email=document.getElementById('s-email').value.trim(),pass=document.getElementById('s-pass').value,err=document.getElementById('s-err');err.textContent='';
+  if(!name){err.textContent='Enter a display name.';return}
+  if(!email){err.textContent='Enter an email.';return}
+  if(!pass||pass.length<6){err.textContent='Password must be 6+ characters.';return}
+  try{
+    const cred=await auth.createUserWithEmailAndPassword(email,pass);
+    await cred.user.updateProfile({displayName:name});
+    G.uid=cred.user.uid;G.name=name;
+    if(G.pendingPhoto){await dbSet(`users/${G.uid}/avatar`,G.pendingPhoto);G.photo=G.pendingPhoto}
+    await dbSet(`users/${G.uid}/profile`,{displayName:name,kills:0,caught:0,games:0,topSpeed:0,createdAt:now()});
+  }catch(e){err.textContent=e.message}
+}
+async function doLogout(){unlistenAll();stopGPS();await auth.signOut()}
+function loadHome(){document.getElementById('home-name').textContent=G.name;setAv(document.getElementById('home-av'),G.photo)}
+
+// ── CREATE ────────────────────────────────────────────────────
+function goCreate(){
+  G.code=genCode();G.isHost=true;G.mode='play';G.roleMode='random';G.bounds=[];G.hunterCount=1;
+  document.getElementById('c-code').textContent=G.code;
+  document.getElementById('h-count').textContent=1;
+  document.getElementById('spec-info').style.display='none';
+  document.getElementById('btn-play').style.color='var(--green)';document.getElementById('btn-play').style.borderColor='var(--green)';
+  document.getElementById('btn-spec').style.color='var(--muted)';document.getElementById('btn-spec').style.borderColor='var(--muted)';
+  document.getElementById('cfg-escape').value='600';document.getElementById('cfg-ping').value='180';document.getElementById('cfg-catch').value='8';document.getElementById('cfg-oob').value='25';
+  show('create');setTimeout(initBmap,300);
+}
+function chHunters(d){G.hunterCount=Math.max(1,Math.min(4,G.hunterCount+d));document.getElementById('h-count').textContent=G.hunterCount}
+function setMode(m){
+  G.mode=m;const s=m==='spectate';
+  document.getElementById('spec-info').style.display=s?'':'none';
+  document.getElementById('btn-play').style.color=s?'var(--muted)':'var(--green)';document.getElementById('btn-play').style.borderColor=s?'var(--muted)':'var(--green)';
+  document.getElementById('btn-spec').style.color=s?'var(--blue)':'var(--muted)';document.getElementById('btn-spec').style.borderColor=s?'var(--blue)':'var(--muted)';
+}
+
+// Boundary map
+function initBmap(){
+  if(G.bMap){G.bMap.remove();G.bMap=null}
+  const c=G.pos?[G.pos.lat,G.pos.lng]:[51.505,-0.09];
+  G.bMap=L.map('bmap',{center:c,zoom:16,zoomControl:true});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,attribution:'© OSM'}).addTo(G.bMap);
+  if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>G.bMap.setView([p.coords.latitude,p.coords.longitude],16),()=>{});
+  G.bMap.on('click',onBmapClick);
+}
+function toggleDraw(){G.drawing=!G.drawing;const b=document.getElementById('draw-btn');b.textContent=G.drawing?'✓ Done':'✏ Draw';G.drawing?b.classList.add('on'):b.classList.remove('on');document.getElementById('bmap-hint').textContent=G.drawing?'Tap map to place points. Tap Done when finished.':(G.bounds.length?`${G.bounds.length} points set.`:'')}
+function onBmapClick(e){if(!G.drawing)return;const pt={lat:e.latlng.lat,lng:e.latlng.lng};G.bounds.push(pt);const dot=L.circleMarker([pt.lat,pt.lng],{radius:5,color:'#a8dadc',fillColor:'#a8dadc',fillOpacity:1,weight:2}).addTo(G.bMap);G.bDots.push(dot);if(G.bLine)G.bMap.removeLayer(G.bLine);if(G.bounds.length>1){const pts=[...G.bounds,G.bounds[0]].map(p=>[p.lat,p.lng]);G.bLine=L.polyline(pts,{color:'#a8dadc',weight:2,dashArray:'6 4'}).addTo(G.bMap)}document.getElementById('bmap-hint').textContent=`${G.bounds.length} point${G.bounds.length>1?'s':''} placed.`}
+function clearBounds(){G.bounds=[];G.drawing=false;if(G.bLine){G.bMap.removeLayer(G.bLine);G.bLine=null}G.bDots.forEach(d=>G.bMap.removeLayer(d));G.bDots=[];document.getElementById('draw-btn').textContent='✏ Draw';document.getElementById('draw-btn').classList.remove('on');document.getElementById('bmap-hint').textContent='Boundary cleared.'}
+
+async function createLobby(){
+  G.isSpec=G.mode==='spectate';
+  G.cfgEscape=parseInt(document.getElementById('cfg-escape').value);
+  G.cfgPing=parseInt(document.getElementById('cfg-ping').value);
+  G.cfgCatch=parseInt(document.getElementById('cfg-catch').value);
+  G.cfgOob=parseInt(document.getElementById('cfg-oob').value);
+  await dbSet(`games/${G.code}/meta`,{hostUid:G.uid,hunterCount:G.hunterCount,phase:'WAITING',boundary:G.bounds.length>=3?G.bounds:null,cfgEscape:G.cfgEscape,cfgPing:G.cfgPing,cfgCatch:G.cfgCatch,cfgOob:G.cfgOob,createdAt:now()});
+  await dbSet(`games/${G.code}/players/${G.uid}`,{displayName:G.name,photo:G.photo||'',role:G.isSpec?'SPECTATOR':null,caught:false,joinedAt:now()});
+  enterLobby();
+}
+
+// ── JOIN ──────────────────────────────────────────────────────
+function goJoin(){
+  document.getElementById('j-code').value='';
+  document.getElementById('j-err').textContent='';
+  show('join');
+}
+function checkJoinCode(){
+  const v=document.getElementById('j-code').value.replace(/[^A-Z0-9]/gi,'').toUpperCase().slice(0,6);
+  document.getElementById('j-code').value=v;
+  // Always enable button if 6 chars — let server validate
+  document.getElementById('j-btn').disabled=false;
+  document.getElementById('j-btn').style.opacity=v.length===6?'1':'0.4';
+}
+async function joinLobby(){
+  const code=document.getElementById('j-code').value.toUpperCase().trim();
+  if(code.length!==6){document.getElementById('j-err').textContent='Enter the full 6-character code.';return}
+  document.getElementById('j-err').textContent='';
+  try{
+    const snap=await db.ref(`games/${code}/meta`).once('value');
+    if(!snap.exists()){document.getElementById('j-err').textContent='Game not found. Check the code.';return}
+    if(snap.val().phase!=='WAITING'){document.getElementById('j-err').textContent='This game has already started.';return}
+    const meta=snap.val();
+    G.code=code;G.isHost=false;G.isSpec=false;
+    G.bounds=meta.boundary||[];G.cfgEscape=meta.cfgEscape||600;G.cfgPing=meta.cfgPing||180;G.cfgCatch=meta.cfgCatch||8;G.cfgOob=meta.cfgOob||25;
+    await dbSet(`games/${code}/players/${G.uid}`,{displayName:G.name,photo:G.photo||'',role:null,caught:false,joinedAt:now()});
+    enterLobby();
+  }catch(e){document.getElementById('j-err').textContent='Error: '+e.message}
+}
+
+// ── LOBBY ──────────────────────────────────────────────────────
+function enterLobby(){
+  document.getElementById('lob-code').textContent=G.code;
+  document.getElementById('wait-code').textContent=G.code;
+  document.getElementById('start-btn').style.display=G.isHost?'':'none';
+  document.getElementById('lob-wait').style.display=G.isHost?'none':'';
+  document.getElementById('role-controls').style.display=G.isHost?'':'none';
+  show('lobby');startGPS(lobbyGPS);
+  listen(`games/${G.code}/players`,data=>{if(!data)return;G.players=data;renderLobPlayers()});
+  if(!G.isHost)listen(`games/${G.code}/meta`,meta=>{
+    if(meta?.phase==='ESCAPE'){unlistenAll();G.role=G.players[G.uid]?.role||'RUNNER';G.bounds=meta.boundary||[];G.cfgEscape=meta.cfgEscape||600;G.cfgPing=meta.cfgPing||180;G.cfgCatch=meta.cfgCatch||8;G.cfgOob=meta.cfgOob||25;beginGame()}
+  });
+}
+function lobbyGPS(pos,err){document.getElementById('gps-stat').innerHTML=err?`<span style="color:var(--red)">⚠ ${err}</span>`:`<span style="color:var(--green)">✓ ±${Math.round(pos.accuracy||0)}m</span>`}
+
+function setRoleMode(m){
+  G.roleMode=m;
+  document.getElementById('btn-random').style.color=m==='random'?'var(--green)':'var(--muted)';document.getElementById('btn-random').style.borderColor=m==='random'?'var(--green)':'var(--muted)';
+  document.getElementById('btn-manual').style.color=m==='manual'?'var(--yellow)':'var(--muted)';document.getElementById('btn-manual').style.borderColor=m==='manual'?'var(--yellow)':'var(--muted)';
+  document.getElementById('manual-hint').style.display=m==='manual'?'':'none';
+  document.getElementById('role-mode-lbl').textContent=m==='manual'?'(manual)':'(random)';
+  renderLobPlayers();
+}
+
+function renderLobPlayers(){
+  const isManual=G.isHost&&G.roleMode==='manual';
+  document.getElementById('lob-players').innerHTML=Object.entries(G.players).map(([uid,p])=>{
+    const border=uid===G.uid?'var(--green)':'var(--border)';
+    const av=`<div class="av av-sm" style="flex-shrink:0">${p.photo?`<img src="${p.photo}" style="width:100%;height:100%;border-radius:50%;object-fit:cover"/>`:'👤'}</div>`;
+    const isSpec=p.role==='SPECTATOR';
+    let rightEl='';
+    if(isManual&&!isSpec&&uid!==G.uid){
+      const cur=p.role||'RUNNER';
+      rightEl=`<select class="role-sel" onchange="setPlayerRole('${uid}',this.value)">
+        <option value="RUNNER"${cur==='RUNNER'?' selected':''}>🏃 Runner</option>
+        <option value="HUNTER"${cur==='HUNTER'?' selected':''}>🎯 Hunter</option>
+      </select>`;
+    }else{
+      const col=p.role==='HUNTER'?'var(--red)':p.role==='SPECTATOR'?'var(--blue)':'var(--muted)';
+      rightEl=`<div class="p-badge" style="border-color:${col};color:${col}">${p.role||'PENDING'}</div>`;
+    }
+    return`<div class="player-row" style="border-left:3px solid ${border}">${av}<div style="flex:1"><div style="font-weight:700">${p.displayName}${uid===G.uid?' <span class="mono muted" style="font-size:10px">(you)</span>':''}</div><div class="mono muted" style="font-size:10px">${uid===G.uid&&G.isHost?'Host':'Player'}</div></div>${rightEl}</div>`;
+  }).join('');
+}
+
+async function setPlayerRole(uid,role){
+  await dbUpd(`games/${G.code}/players/${uid}`,{role});
+}
+
+// ── HOST START ─────────────────────────────────────────────────
+async function hostStart(){
+  const eligible=Object.entries(G.players).filter(([,p])=>p.role!=='SPECTATOR').map(([uid])=>uid);
+  const upd={};
+  if(G.roleMode==='random'){
+    const shuffled=[...eligible].sort(()=>Math.random()-.5);
+    const hunters=shuffled.slice(0,G.hunterCount);
+    eligible.forEach(uid=>{const role=hunters.includes(uid)?'HUNTER':'RUNNER';upd[`games/${G.code}/players/${uid}/role`]=role;if(uid===G.uid)G.role=role});
+  }else{
+    // manual — use whatever roles are set, assign remaining as runner
+    eligible.forEach(uid=>{
+      const existing=G.players[uid]?.role;
+      const role=(existing==='HUNTER'||existing==='RUNNER')?existing:'RUNNER';
+      upd[`games/${G.code}/players/${uid}/role`]=role;if(uid===G.uid)G.role=role;
+    });
+  }
+  await dbUpd('/',upd);
+  await dbUpd(`games/${G.code}/meta`,{phase:'ESCAPE'});
+  await dbPush(`games/${G.code}/events`,{msg:'🚨 Game started! Runners — RUN!',type:'danger',ts:now()});
+  unlistenAll();beginGame();
+}
+
+// ── BEGIN GAME ─────────────────────────────────────────────────
+function beginGame(){
+  G.phase='ESCAPE';G.esc=G.cfgEscape;G.hunt=0;G.pingCD=G.cfgPing;G.pings=0;G.kills=0;G.caught=false;
+  G.trail=[];G.topSpd=0;G.lastPings=[];G.centered=false;G.oob=false;
+  show('game');initMap();renderHUD();addEv('🚨 Game started!','danger');wakeLock();
+  document.getElementById('spec-btn').style.display=G.isSpec?'':'none';
+  G.ticker=setInterval(tick,1000);
+  listen(`games/${G.code}/players`,data=>{if(!data)return;G.players=data;Object.entries(data).forEach(([uid,p])=>{if(uid!==G.uid)drawPM(uid,p)})});
+  listen(`games/${G.code}/meta`,meta=>{
+    if(!meta)return;
+    if(meta.phase==='HUNT'&&G.phase==='ESCAPE'){G.phase='HUNT';G.pingCD=G.cfgPing;addEv('⚡ Hunt phase!','danger');document.getElementById('ov-phase').style.display='none';document.getElementById('ov-info').style.display=''}
+    if(meta.phase==='DONE'&&G.phase!=='DONE')finishGame();
+  });
+  if(G.role==='HUNTER')listen(`games/${G.code}/pings`,all=>{
+    if(!all||G.phase!=='HUNT')return;
+    Object.entries(all).forEach(([uid,pings])=>{if(!pings)return;const latest=Object.values(pings).sort((a,b)=>b.ts-a.ts)[0];if(latest&&now()-latest.ts<6000){const pl=G.players[uid];if(pl&&!pl.caught)drawPing(uid,pl.displayName,latest.lat,latest.lng)}});
+  });
+}
+
+// ── GPS ────────────────────────────────────────────────────────
+function startGPS(cb){
+  if(!navigator.geolocation){cb&&cb(null,'Not supported');return}
+  if(G.watchId!=null)navigator.geolocation.clearWatch(G.watchId);
+  G.watchId=navigator.geolocation.watchPosition(
+    pos=>{const loc={lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,speed:pos.coords.speed,ts:now()};G.pos=loc;G.trail.push(loc);if(G.trail.length>1200)G.trail=G.trail.slice(-1000);if(loc.speed!=null&&loc.speed>=0){const kmh=loc.speed*3.6;if(kmh>G.topSpd)G.topSpd=kmh}cb&&cb(loc,null);if(G.phase&&G.phase!=='DONE')onGPS(loc)},
+    err=>cb&&cb(null,err.message),{enableHighAccuracy:true,maximumAge:0,timeout:15000});
+}
+function stopGPS(){if(G.watchId!=null){navigator.geolocation.clearWatch(G.watchId);G.watchId=null}}
+
+function onGPS(loc){
+  document.getElementById('ov-gps').style.display='none';
+  placeMe(loc);
+  dbUpd(`games/${G.code}/players/${G.uid}`,{lat:loc.lat,lng:loc.lng});
+  if(G.bounds.length>=3&&G.phase==='HUNT'&&!G.isSpec&&!G.caught){const inside=inPoly(loc.lat,loc.lng,G.bounds);if(!inside&&!G.oob)startOOB();if(inside&&G.oob)stopOOB()}
+  if(G.role==='HUNTER'&&G.phase==='HUNT'){
+    Object.entries(G.players).forEach(([uid,p])=>{
+      if(p.role!=='RUNNER'||p.caught||!p.lat)return;
+      if(hav(loc.lat,loc.lng,p.lat,p.lng)<G.cfgCatch){dbUpd(`games/${G.code}/players/${uid}`,{caught:true});dbPush(`games/${G.code}/events`,{msg:`🎯 ${G.name} caught ${p.displayName}!`,type:'danger',ts:now()});G.kills++;toast(`🎯 Caught ${p.displayName}!`,'var(--red)')}
+    });
+  }
+  const me=G.players[G.uid];if(me?.caught&&!G.caught){G.caught=true;document.getElementById('ov-caught').style.display='';toast('You were caught!','var(--red)')}
+}
+
+function startOOB(){G.oob=true;G.oobT=G.cfgOob;document.getElementById('ov-oob').style.display='';document.getElementById('oob-n').textContent=G.oobT;addEv(`⚠ OUT OF BOUNDS — exposed for ${G.cfgOob}s!`,'danger');toast('⚠ Out of bounds!','var(--red)');dbUpd(`games/${G.code}/players/${G.uid}`,{oob:true,lat:G.pos.lat,lng:G.pos.lng});G.oobIv=setInterval(()=>{G.oobT--;document.getElementById('oob-n').textContent=G.oobT;if(G.oobT<=0)stopOOB()},1000)}
+function stopOOB(){G.oob=false;clearInterval(G.oobIv);document.getElementById('ov-oob').style.display='none';dbUpd(`games/${G.code}/players/${G.uid}`,{oob:false})}
+
+// ── MAP ────────────────────────────────────────────────────────
+function initMap(){
+  if(G.map){G.map.remove();G.map=null;G.myM=null;G.accC=null;G.pMarkers={};G.pingMs={}}
+  const c=G.pos?[G.pos.lat,G.pos.lng]:[51.505,-0.09];
+  G.map=L.map('map',{center:c,zoom:17,zoomControl:true});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:20}).addTo(G.map);
+  if(G.bounds.length>=3)L.polygon(G.bounds.map(p=>[p.lat,p.lng]),{color:'#a8dadc',fillColor:'#a8dadc',fillOpacity:.05,weight:2,dashArray:'8 4'}).addTo(G.map);
+  if(G.pos){placeMe(G.pos);document.getElementById('ov-gps').style.display='none'}
+}
+function placeMe(loc){
+  const col=G.isSpec?'#a8dadc':G.role==='HUNTER'?'#ff4d6d':'#00ff9d';
+  if(!G.myM){const icon=L.divIcon({className:'',html:`<div class="m-me" style="background:${col};box-shadow:0 0 12px ${col}66"></div>`,iconSize:[18,18],iconAnchor:[9,9]});G.myM=L.marker([loc.lat,loc.lng],{icon,zIndexOffset:1000}).addTo(G.map)}
+  else G.myM.setLatLng([loc.lat,loc.lng]);
+  if(loc.accuracy){if(!G.accC)G.accC=L.circle([loc.lat,loc.lng],{radius:loc.accuracy,color:col,fillColor:col,fillOpacity:.05,weight:1}).addTo(G.map);else G.accC.setLatLng([loc.lat,loc.lng]).setRadius(loc.accuracy)}
+  if(!G.centered){G.map.setView([loc.lat,loc.lng],17);G.centered=true}
+}
+function drawPM(uid,p){
+  if(!p.lat||!p.lng)return;
+  const visible=G.isSpec||p.oob||(G.phase==='HUNT'&&G.role==='HUNTER'&&p.role==='HUNTER')||(p.role==='SPECTATOR');
+  if(!visible){if(G.pMarkers[uid]){G.map.removeLayer(G.pMarkers[uid]);delete G.pMarkers[uid]}return}
+  const col=p.oob?'#ff4d6d':p.role==='HUNTER'?'#ff4d6d':p.role==='SPECTATOR'?'#a8dadc':'#00ff9d';
+  const lbl=p.oob?`${p.displayName} ⚠`:p.displayName;
+  const pic=p.photo?`<img src="${p.photo}" style="width:22px;height:22px;border-radius:50%;object-fit:cover;border:2px solid ${col}"/>`:`<div style="width:22px;height:22px;border-radius:50%;background:#080e18;border:2px solid ${col};display:flex;align-items:center;justify-content:center;font-size:11px">👤</div>`;
+  if(!G.pMarkers[uid]){const icon=L.divIcon({className:'',html:`<div style="position:relative;text-align:center">${pic}<div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);background:#080e18;color:${col};font-size:9px;padding:2px 5px;border-radius:2px;white-space:nowrap;font-family:'Share Tech Mono',monospace;border:1px solid ${col}44">${lbl}</div></div>`,iconSize:[22,22],iconAnchor:[11,11]});G.pMarkers[uid]=L.marker([p.lat,p.lng],{icon}).addTo(G.map)}
+  else G.pMarkers[uid].setLatLng([p.lat,p.lng]);
+}
+function drawPing(uid,name,lat,lng){const k='ping_'+uid;if(G.pingMs[k])G.map.removeLayer(G.pingMs[k]);const icon=L.divIcon({className:'',html:`<div style="position:relative"><div class="m-ping"></div><div class="m-ping-lbl">${name}</div></div>`,iconSize:[13,13],iconAnchor:[6,6]});G.pingMs[k]=L.marker([lat,lng],{icon}).addTo(G.map);G.lastPings=G.lastPings.filter(p=>p.id!==uid);G.lastPings.push({id:uid,name,ts:now()})}
+
+// ── TICK ───────────────────────────────────────────────────────
+function tick(){
+  if(G.phase==='ESCAPE'){G.esc--;if(G.esc<=0){G.phase='HUNT';G.pingCD=G.cfgPing;addEv('⚡ Hunt phase! Hunters released.','danger');if(G.isHost)dbUpd(`games/${G.code}/meta`,{phase:'HUNT'});document.getElementById('ov-phase').style.display='none';document.getElementById('ov-info').style.display=''}}
+  else if(G.phase==='HUNT'){G.hunt++;G.pingCD--;if(G.pingCD<=0){firePing();G.pingCD=G.cfgPing}}
+  renderHUD();
+}
+function firePing(){G.pings++;if((G.role==='RUNNER'||G.isSpec)&&G.pos){if(G.role==='RUNNER')addEv('📡 Your location was pinged to hunters.','ping');dbPush(`games/${G.code}/pings/${G.uid}`,{lat:G.pos.lat,lng:G.pos.lng,ts:now()})}if(G.role==='HUNTER')addEv('📡 Ping received.','ping');updateInfo()}
+function specPing(){if(!G.isSpec)return;let n=0;Object.entries(G.players).forEach(([uid,p])=>{if(p.role==='RUNNER'&&!p.caught&&p.lat){dbPush(`games/${G.code}/pings/${uid}`,{lat:p.lat,lng:p.lng,ts:now()});n++}});addEv(`👁 Spectator pinged ${n} runner${n!==1?'s':''}.`,'ping');toast(`${n} pinged`,'var(--yellow)')}
+
+// ── HUD ────────────────────────────────────────────────────────
+function renderHUD(){
+  const esc=G.phase==='ESCAPE';const myCol=G.isSpec?'var(--blue)':G.role==='HUNTER'?'var(--red)':'var(--green)';
+  document.getElementById('ph-lbl').textContent=esc?'ESCAPE PHASE':'HUNT PHASE';document.getElementById('ph-lbl').style.color=esc?'var(--green)':'var(--red)';
+  const tv=document.getElementById('ph-time');tv.textContent=esc?fmt(G.esc):fmt(G.hunt);tv.style.color=esc?(G.esc<60?'var(--red)':'var(--green)'):'var(--red)';
+  document.getElementById('chip-ic').textContent=G.isSpec?'👁':G.role==='HUNTER'?'🎯':'🏃';
+  document.getElementById('chip-lbl').textContent=G.isSpec?'SPECTATOR':G.role;document.getElementById('chip-lbl').style.color=myCol;
+  document.getElementById('role-chip').style.borderColor=myCol+'55';
+  const pc=document.getElementById('ping-chip');
+  if(!esc&&!G.isSpec){pc.style.display='';document.getElementById('ping-val').textContent=fmt(G.pingCD);document.getElementById('ping-val').style.color=G.pingCD<30?'var(--yellow)':'var(--red)'}else pc.style.display='none';
+  if(esc)renderEscOv();else updateInfo();
+}
+function renderEscOv(){
+  document.getElementById('ov-phase').style.display='';
+  const isH=G.role==='HUNTER',isS=G.isSpec;
+  const[ic,ti,su,bc,bg]=isS?['👁','SPECTATING',`Hunt in ${fmt(G.esc)}`,'rgba(168,218,220,.4)','rgba(168,218,220,.07)']:isH?['🔒','HUNTERS LOCKED',`Release in ${fmt(G.esc)}`,'rgba(255,77,109,.4)','rgba(255,77,109,.08)']:['🏃','RUN! GET FAR AWAY',`Hunters release in ${fmt(G.esc)}`,'rgba(0,255,157,.4)','rgba(0,255,157,.06)'];
+  document.getElementById('pb-ic').textContent=ic;document.getElementById('pb-title').textContent=ti;document.getElementById('pb-title').style.color=isS?'var(--blue)':isH?'var(--red)':'var(--green)';document.getElementById('pb-sub').textContent=su;
+  const b=document.getElementById('pbox');b.style.borderColor=bc;b.style.background=bg;
+}
+function updateInfo(){
+  if(G.phase!=='HUNT')return;document.getElementById('ov-info').style.display='';
+  if(G.isSpec){const r=Object.values(G.players).filter(p=>p.role==='RUNNER'&&!p.caught).length;document.getElementById('inf-lbl').textContent='👁 SPECTATING';document.getElementById('inf-lbl').style.color='var(--blue)';document.getElementById('inf-body').innerHTML=`<div>🏃 ${r} runner${r!==1?'s':''} alive</div><div>🎯 ${Object.values(G.players).filter(p=>p.role==='HUNTER').length} hunters</div>`;document.getElementById('inf-sub').textContent='Tap PING to expose runners'}
+  else if(G.role==='HUNTER'){document.getElementById('inf-lbl').textContent='📡 LAST KNOWN';document.getElementById('inf-lbl').style.color='var(--red)';document.getElementById('inf-body').innerHTML=G.lastPings.length?G.lastPings.map(p=>`<div style="color:var(--yellow)">🟡 ${p.name} <span class="muted">${Math.round((now()-p.ts)/1000)}s ago</span></div>`).join(''):'<span class="muted">Waiting for first ping…</span>';document.getElementById('inf-sub').textContent='Pins = snapshot, not live'}
+  else{document.getElementById('inf-lbl').textContent='STATUS';document.getElementById('inf-lbl').style.color='var(--green)';document.getElementById('inf-body').innerHTML=`Next ping <span style="color:${G.pingCD<30?'var(--red)':'var(--yellow)'}">${fmt(G.pingCD)}</span>`;document.getElementById('inf-sub').textContent='Keep moving between pings'}
+}
+function addEv(msg,type='info'){const log=document.getElementById('event-log');const d=document.createElement('div');d.className='ev mono';d.style.color=type==='danger'?'var(--red)':type==='ping'?'var(--yellow)':'var(--muted)';d.textContent=msg;log.insertBefore(d,log.firstChild);while(log.children.length>12)log.removeChild(log.lastChild)}
+
+// ── END GAME ───────────────────────────────────────────────────
+function confirmEnd(){document.getElementById('confirm-ov').classList.add('open')}
+function closeConfirm(){document.getElementById('confirm-ov').classList.remove('open')}
+async function doEnd(){closeConfirm();clearInterval(G.ticker);stopGPS();unlistenAll();releaseWL();G.phase='DONE';if(G.isHost)await dbUpd(`games/${G.code}/meta`,{phase:'DONE'});await saveResults();showLB()}
+function finishGame(){if(G.phase==='DONE')return;clearInterval(G.ticker);stopGPS();unlistenAll();releaseWL();G.phase='DONE';saveResults().then(showLB)}
+
+function calcDist(){return G.trail.length>1?G.trail.reduce((a,p,i,arr)=>i===0?0:a+hav(arr[i-1].lat,arr[i-1].lng,p.lat,p.lng),0):0}
+async function saveResults(){
+  const dist=Math.round(calcDist()),spd=parseFloat(G.topSpd.toFixed(1));
+  const res={displayName:G.name,photo:G.photo||'',role:G.role||'SPECTATOR',caught:G.caught,dist,topSpeed:spd,kills:G.kills,huntTime:G.hunt,ts:now()};
+  await dbUpd(`games/${G.code}/results/${G.uid}`,res);
+  await dbSet(`users/${G.uid}/games/${G.code}`,{...res,gameCode:G.code});
+  const snap=await db.ref(`users/${G.uid}/profile`).once('value');const p=snap.val()||{};
+  await dbUpd(`users/${G.uid}/profile`,{kills:(p.kills||0)+G.kills,caught:(p.caught||0)+(G.caught?1:0),games:(p.games||0)+1,topSpeed:Math.max(p.topSpeed||0,spd)});
+}
+
+async function showLB(){
+  document.getElementById('lb-code').textContent=`GAME · ${G.code}`;
+  const myCol=G.isSpec?'var(--blue)':G.role==='HUNTER'?'var(--red)':'var(--green)';
+  document.getElementById('lb-role').innerHTML=`<div style="font-size:24px;font-weight:900;color:${myCol}">${G.isSpec?'👁 Spectator':G.role==='HUNTER'?'🎯 Hunter':'🏃 Runner'}${G.caught?' · <span style="color:var(--red)">CAUGHT</span>':''}</div>`;
+  document.getElementById('s-dist').textContent=Math.round(calcDist())+'m';document.getElementById('s-spd').textContent=G.topSpd.toFixed(1)+' km/h';document.getElementById('s-time').textContent=fmt(G.hunt);document.getElementById('s-kills').textContent=G.kills;
+  const snap=await db.ref(`games/${G.code}/results`).once('value');
+  const rows=Object.values(snap.val()||{}).sort((a,b)=>(b.kills||0)-(a.kills||0));
+  document.getElementById('lb-players').innerHTML=rows.map((r,i)=>{const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';const col=r.role==='HUNTER'?'var(--red)':r.role==='SPECTATOR'?'var(--blue)':'var(--green)';const av=r.photo?`<img src="${r.photo}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid ${col}"/>`:`<div style="width:32px;height:32px;border-radius:50%;background:var(--bg3);border:1px solid ${col};display:flex;align-items:center;justify-content:center;font-size:14px">👤</div>`;return`<div class="player-row"><div style="font-size:18px;width:24px">${medal}</div>${av}<div style="flex:1"><div style="font-weight:700;color:${col}">${r.displayName} <span class="mono muted" style="font-size:10px">${r.role}</span></div><div class="mono muted" style="font-size:10px">${r.dist}m · ${r.topSpeed}km/h · ${r.kills||0} kill${(r.kills||0)!==1?'s':''}${r.caught?' · caught':''}</div></div></div>`}).join('');
+  show('leaderboard');
+}
+function newGame(){if(G.map){G.map.remove();G.map=null}G.myM=null;G.accC=null;G.pMarkers={};G.pingMs={};G.players={};G.role=null;G.isHost=false;G.isSpec=false;G.code=null;G.bounds=[];show('home')}
+
+async function goHistory(){
+  show('history');document.getElementById('hist-list').innerHTML='<div class="mono muted" style="text-align:center;padding:32px 0;font-size:12px">Loading…</div>';
+  const snap=await db.ref(`users/${G.uid}/games`).orderByChild('ts').limitToLast(30).once('value');const games=snap.val();
+  if(!games){document.getElementById('hist-list').innerHTML='<div class="mono muted" style="text-align:center;padding:32px 0;font-size:12px">No games yet.</div>';return}
+  document.getElementById('hist-list').innerHTML=Object.values(games).sort((a,b)=>b.ts-a.ts).map(g=>{const col=g.role==='HUNTER'?'var(--red)':g.role==='SPECTATOR'?'var(--blue)':'var(--green)';const date=new Date(g.ts).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});return`<div class="hist-item" onclick="goDetail('${g.gameCode}')"><div class="row"><div style="flex:1"><div class="mono" style="font-size:10px;letter-spacing:2px;color:${col}">${g.role}</div><div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:3px">${g.gameCode}</div><div class="mono muted" style="font-size:10px">${date} · ${g.dist}m · ${g.kills||0} kill${(g.kills||0)!==1?'s':''}${g.caught?' · caught':''}</div></div><div class="mono muted" style="font-size:22px">›</div></div></div>`}).join('');
+}
+async function goDetail(code){
+  show('game-detail');document.getElementById('det-head').innerHTML=`<div class="mono muted" style="font-size:9px;letter-spacing:3px">GAME</div><div class="title-lg">${code}</div>`;
+  document.getElementById('det-body').innerHTML='<div class="mono muted" style="padding:20px 0;font-size:12px">Loading…</div>';
+  const snap=await db.ref(`games/${code}/results`).once('value');const results=snap.val();
+  if(!results){document.getElementById('det-body').innerHTML='<div class="mono muted" style="padding:20px 0;font-size:12px">No data.</div>';return}
+  document.getElementById('det-body').innerHTML=`<div class="card">${Object.values(results).sort((a,b)=>(b.kills||0)-(a.kills||0)).map((r,i)=>{const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';const col=r.role==='HUNTER'?'var(--red)':r.role==='SPECTATOR'?'var(--blue)':'var(--green)';const av=r.photo?`<img src="${r.photo}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid ${col}"/>`:`<div style="width:36px;height:36px;border-radius:50%;background:var(--bg3);border:1px solid ${col};display:flex;align-items:center;justify-content:center;font-size:16px">👤</div>`;return`<div class="player-row" style="margin-top:8px"><div style="font-size:18px;width:24px">${medal}</div>${av}<div style="flex:1"><div style="font-weight:700;color:${col}">${r.displayName} <span class="mono muted" style="font-size:10px">${r.role}</span></div><div class="mono muted" style="font-size:10px;line-height:2">${r.dist}m · ${r.topSpeed}km/h · ${r.kills||0} kill${(r.kills||0)!==1?'s':''}${r.caught?' · <span style="color:var(--red)">CAUGHT</span>':''}</div></div></div>`}).join('')}</div>`;
+}
+
+async function goProfile(){
+  show('profile');document.getElementById('prof-name').textContent=G.name;setAv(document.getElementById('prof-av'),G.photo);
+  const snap=await db.ref(`users/${G.uid}/profile`).once('value');const p=snap.val()||{};
+  document.getElementById('p-kills').textContent=p.kills||0;document.getElementById('p-spd').textContent=(p.topSpeed||0).toFixed(1)+' km/h';document.getElementById('p-games').textContent=p.games||0;document.getElementById('p-caught').textContent=p.caught||0;
+  const medals=getMedals(p);document.getElementById('prof-medals').innerHTML=medals.length?medals.map(m=>`<div class="medal-item"><div class="medal-ic">${m.ic}</div><div class="medal-lbl">${m.lbl}</div></div>`).join(''):'<div class="mono muted" style="font-size:11px">Play more games to earn medals!</div>';
+  const gs=await db.ref(`users/${G.uid}/games`).orderByChild('ts').limitToLast(5).once('value');const games=gs.val();
+  document.getElementById('p-recent').innerHTML=games?Object.values(games).sort((a,b)=>b.ts-a.ts).map(g=>{const col=g.role==='HUNTER'?'var(--red)':g.role==='SPECTATOR'?'var(--blue)':'var(--green)';const date=new Date(g.ts).toLocaleDateString('en-GB',{day:'numeric',month:'short'});return`<div style="padding:9px 0;border-bottom:1px solid var(--border)"><div class="mono" style="font-size:10px;color:${col}">${g.role} · ${g.gameCode} · ${date}</div><div class="mono muted" style="font-size:10px">${g.dist}m · ${g.kills||0} kill${(g.kills||0)!==1?'s':''}${g.caught?' · caught':''}</div></div>`}).join(''):'<div class="mono muted" style="font-size:11px">No games yet.</div>';
+}
+function getMedals(p){const m=[];if((p.kills||0)>=1)m.push({ic:'🥉',lbl:'First Blood'});if((p.kills||0)>=5)m.push({ic:'🥈',lbl:'Hunter'});if((p.kills||0)>=15)m.push({ic:'🥇',lbl:'Apex Predator'});if((p.topSpeed||0)>=10)m.push({ic:'⚡',lbl:'Fast'});if((p.topSpeed||0)>=20)m.push({ic:'🚀',lbl:'Sprinter'});if((p.games||0)>=5)m.push({ic:'🎮',lbl:'Veteran'});if((p.games||0)>=20)m.push({ic:'🏆',lbl:'Legend'});if((p.games||0)>=5&&(p.caught||0)===0)m.push({ic:'👻',lbl:'Ghost'});return m}
+async function changePic(input){const f=input.files[0];if(!f)return;toast('Saving…','var(--yellow)');const r=new FileReader();r.onload=async e=>{const comp=await compressImg(e.target.result,120,.75);await dbSet(`users/${G.uid}/avatar`,comp);G.photo=comp;loadHome();goProfile();toast('Photo updated!')};r.readAsDataURL(f)}
+
+async function wakeLock(){try{if('wakeLock'in navigator)G.wakeLock=await navigator.wakeLock.request('screen')}catch(e){}}
+function releaseWL(){if(G.wakeLock){G.wakeLock.release();G.wakeLock=null}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&G.phase==='HUNT')wakeLock()});
+</script>
+</body>
+</html>
